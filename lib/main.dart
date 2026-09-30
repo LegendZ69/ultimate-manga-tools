@@ -1089,7 +1089,7 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
 
   Widget _pageRail() {
     final project = _project!;
-    return ColoredBox(
+    return Material(
       color: const Color(0xFFFBFAF7),
       child: Column(
         children: [
