@@ -90,25 +90,28 @@ void main() {
     },
   );
 
-  test('archive bombs fail declared bounds or bounded inflation before image decode', () {
-    expect(
-      () => archives.importCbz(
-        zip([('a.png', png)], declaredSize: ArchiveService.maxEntryBytes + 1),
-      ),
-      throwsFormatException,
-    );
-    expect(
-      () => archives.importCbz(
-        zip([('a.png', png)], deflate: true, declaredSize: 8),
-      ),
-      throwsFormatException,
-    );
-    final repeated = Uint8List(1024 * 1024);
-    expect(
-      () => archives.importCbz(zip([('a.png', repeated)], deflate: true)),
-      throwsFormatException,
-    );
-  });
+  test(
+    'archive bombs fail declared bounds or bounded inflation before image decode',
+    () {
+      expect(
+        () => archives.importCbz(
+          zip([('a.png', png)], declaredSize: ArchiveService.maxEntryBytes + 1),
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => archives.importCbz(
+          zip([('a.png', png)], deflate: true, declaredSize: 8),
+        ),
+        throwsFormatException,
+      );
+      final repeated = Uint8List(1024 * 1024);
+      expect(
+        () => archives.importCbz(zip([('a.png', repeated)], deflate: true)),
+        throwsFormatException,
+      );
+    },
+  );
 
   test('corruption and mismatched local filenames are rejected', () {
     final corrupt = zip([('a.png', png)]);
@@ -159,36 +162,40 @@ void main() {
     );
   });
 
-  test('checkpoint restores source, edits, text, notes, language, and review states', () {
-    final edited = makePage('edited')
-      ..setTranscript('An English line')
-      ..setEdited(png, 'image/png', notes: 'Panel 2 dialogue redacted.')
-      ..markReviewed();
-    final original = makePage('original')..useOriginal(true);
-    final project = MangaProject(
-      title: 'Manga & notes',
-      pages: [edited, original],
-      glossary: '名前 = Name',
-      sourceLanguage: 'ja',
-      targetLanguage: 'en',
-    );
-    final restored = archives.openProject(archives.saveProject(project));
-    expect(restored.title, project.title);
-    expect(restored.glossary, project.glossary);
-    expect(restored.exportReady, isTrue);
-    expect(restored.pages.first.originalBytes, png);
-    expect(restored.pages.first.editedBytes, png);
-    expect(restored.pages.first.transcript, 'An English line');
-    expect(restored.pages.first.notes, 'Panel 2 dialogue redacted.');
-    expect(restored.pages.first.reviewed, isTrue);
-    expect(restored.pages.last.keepOriginal, isTrue);
-    final exportedText = latin1.decode(archives.exportCbz(restored));
-    expect(exportedText, contains('ComicInfo.xml'));
-    expect(exportedText, contains('Manga &amp; notes'));
-    expect(exportedText, contains('translation-notes.json'));
-    expect(exportedText, contains('Panel 2 dialogue redacted.'));
-    expect(exportedText, contains('original_kept_explicitly'));
-  });
+  test(
+    'checkpoint restores source, edits, text, notes, language, and review states',
+    () {
+      final edited =
+          makePage('edited')
+            ..setTranscript('An English line')
+            ..setEdited(png, 'image/png', notes: 'Panel 2 dialogue redacted.')
+            ..markReviewed();
+      final original = makePage('original')..useOriginal(true);
+      final project = MangaProject(
+        title: 'Manga & notes',
+        pages: [edited, original],
+        glossary: '名前 = Name',
+        sourceLanguage: 'ja',
+        targetLanguage: 'en',
+      );
+      final restored = archives.openProject(archives.saveProject(project));
+      expect(restored.title, project.title);
+      expect(restored.glossary, project.glossary);
+      expect(restored.exportReady, isTrue);
+      expect(restored.pages.first.originalBytes, png);
+      expect(restored.pages.first.editedBytes, png);
+      expect(restored.pages.first.transcript, 'An English line');
+      expect(restored.pages.first.notes, 'Panel 2 dialogue redacted.');
+      expect(restored.pages.first.reviewed, isTrue);
+      expect(restored.pages.last.keepOriginal, isTrue);
+      final exportedText = latin1.decode(archives.exportCbz(restored));
+      expect(exportedText, contains('ComicInfo.xml'));
+      expect(exportedText, contains('Manga &amp; notes'));
+      expect(exportedText, contains('translation-notes.json'));
+      expect(exportedText, contains('Panel 2 dialogue redacted.'));
+      expect(exportedText, contains('original_kept_explicitly'));
+    },
+  );
 
   test(
     'unreviewed checkpoints stay unreviewed and cannot masquerade as projects',
@@ -225,46 +232,49 @@ void main() {
     expect(BackendClient.validateBaseUrl('http://[::1]:8787').port, 8787);
   });
 
-  test('service uses session auth, source bytes, translated text, and no redirects', () async {
-    final page = makePage()..setTranscript('Hello!');
-    final project = MangaProject(
-      title: 'API test',
-      pages: [page],
-      glossary: 'Name = Name',
-    );
-    final calls = <String>[];
-    final backend = BackendClient(
-      baseUrl: 'https://service.example/api',
-      token: 'session-only',
-      client: MockClient((request) async {
-        calls.add(request.url.path);
-        expect(request.headers['Authorization'], 'Bearer session-only');
-        expect(request.followRedirects, isFalse);
-        final body = jsonDecode(request.body) as Map<String, dynamic>;
-        expect(body['image_base64'], base64Encode(png));
-        expect(body['glossary'], 'Name = Name');
-        expect(body.containsKey('api_key'), isFalse);
-        if (request.url.path.endsWith('/transcribe')) {
-          return http.Response(jsonEncode({'transcript': 'Translated'}), 200);
-        }
-        expect(body['transcript'], 'Hello!');
-        return http.Response(
-          jsonEncode({
-            'image_base64': base64Encode(png),
-            'mime_type': 'image/png',
-            'notes': ['Redacted panel 2.', 'Checked.'],
-          }),
-          200,
-        );
-      }),
-    );
-    expect(await backend.transcribe(page, project), 'Translated');
-    final result = await backend.inpaint(page, project);
-    expect(result.bytes, png);
-    expect(result.notes, 'Redacted panel 2.\nChecked.');
-    expect(calls, ['/api/v1/transcribe', '/api/v1/inpaint']);
-    backend.close();
-  });
+  test(
+    'service uses session auth, source bytes, translated text, and no redirects',
+    () async {
+      final page = makePage()..setTranscript('Hello!');
+      final project = MangaProject(
+        title: 'API test',
+        pages: [page],
+        glossary: 'Name = Name',
+      );
+      final calls = <String>[];
+      final backend = BackendClient(
+        baseUrl: 'https://service.example/api',
+        token: 'session-only',
+        client: MockClient((request) async {
+          calls.add(request.url.path);
+          expect(request.headers['Authorization'], 'Bearer session-only');
+          expect(request.followRedirects, isFalse);
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['image_base64'], base64Encode(png));
+          expect(body['glossary'], 'Name = Name');
+          expect(body.containsKey('api_key'), isFalse);
+          if (request.url.path.endsWith('/transcribe')) {
+            return http.Response(jsonEncode({'transcript': 'Translated'}), 200);
+          }
+          expect(body['transcript'], 'Hello!');
+          return http.Response(
+            jsonEncode({
+              'image_base64': base64Encode(png),
+              'mime_type': 'image/png',
+              'notes': ['Redacted panel 2.', 'Checked.'],
+            }),
+            200,
+          );
+        }),
+      );
+      expect(await backend.transcribe(page, project), 'Translated');
+      final result = await backend.inpaint(page, project);
+      expect(result.bytes, png);
+      expect(result.notes, 'Redacted panel 2.\nChecked.');
+      expect(calls, ['/api/v1/transcribe', '/api/v1/inpaint']);
+      backend.close();
+    },
+  );
 
   test(
     'AI request limits reject locally before a paid request is sent',
@@ -329,40 +339,43 @@ Uint8List zip(
     final size = declaredSize ?? data.length,
         crc = crc32(data),
         offset = output.length;
-    final local = ByteData(30)
-      ..setUint32(0, 0x04034b50, Endian.little)
-      ..setUint16(4, 20, Endian.little)
-      ..setUint16(6, 0x800, Endian.little)
-      ..setUint16(8, deflate ? 8 : 0, Endian.little)
-      ..setUint32(14, crc, Endian.little)
-      ..setUint32(18, compressed.length, Endian.little)
-      ..setUint32(22, size, Endian.little)
-      ..setUint16(26, name.length, Endian.little);
+    final local =
+        ByteData(30)
+          ..setUint32(0, 0x04034b50, Endian.little)
+          ..setUint16(4, 20, Endian.little)
+          ..setUint16(6, 0x800, Endian.little)
+          ..setUint16(8, deflate ? 8 : 0, Endian.little)
+          ..setUint32(14, crc, Endian.little)
+          ..setUint32(18, compressed.length, Endian.little)
+          ..setUint32(22, size, Endian.little)
+          ..setUint16(26, name.length, Endian.little);
     output.add(local.buffer.asUint8List());
     output.add(name);
     output.add(compressed);
-    final central = ByteData(46)
-      ..setUint32(0, 0x02014b50, Endian.little)
-      ..setUint16(4, 20, Endian.little)
-      ..setUint16(6, 20, Endian.little)
-      ..setUint16(8, 0x800, Endian.little)
-      ..setUint16(10, deflate ? 8 : 0, Endian.little)
-      ..setUint32(16, crc, Endian.little)
-      ..setUint32(20, compressed.length, Endian.little)
-      ..setUint32(24, size, Endian.little)
-      ..setUint16(28, name.length, Endian.little)
-      ..setUint32(42, offset, Endian.little);
+    final central =
+        ByteData(46)
+          ..setUint32(0, 0x02014b50, Endian.little)
+          ..setUint16(4, 20, Endian.little)
+          ..setUint16(6, 20, Endian.little)
+          ..setUint16(8, 0x800, Endian.little)
+          ..setUint16(10, deflate ? 8 : 0, Endian.little)
+          ..setUint32(16, crc, Endian.little)
+          ..setUint32(20, compressed.length, Endian.little)
+          ..setUint32(24, size, Endian.little)
+          ..setUint16(28, name.length, Endian.little)
+          ..setUint32(42, offset, Endian.little);
     directory.add(central.buffer.asUint8List());
     directory.add(name);
   }
   final directoryOffset = output.length, directorySize = directory.length;
   output.add(directory.takeBytes());
-  final end = ByteData(22)
-    ..setUint32(0, 0x06054b50, Endian.little)
-    ..setUint16(8, files.length, Endian.little)
-    ..setUint16(10, files.length, Endian.little)
-    ..setUint32(12, directorySize, Endian.little)
-    ..setUint32(16, directoryOffset, Endian.little);
+  final end =
+      ByteData(22)
+        ..setUint32(0, 0x06054b50, Endian.little)
+        ..setUint16(8, files.length, Endian.little)
+        ..setUint16(10, files.length, Endian.little)
+        ..setUint32(12, directorySize, Endian.little)
+        ..setUint32(16, directoryOffset, Endian.little);
   output.add(end.buffer.asUint8List());
   return output.takeBytes();
 }

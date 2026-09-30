@@ -43,7 +43,7 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
-      - run: flutter pub get
+      - run: flutter pub get --enforce-lockfile
       - name: Archive resolved dependency lockfile
         uses: actions/upload-artifact@v4
         with:

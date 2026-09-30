@@ -115,11 +115,12 @@ class BackendClient {
         );
       }
       final notes = result['notes'];
-      final noteText = notes is List
-          ? notes.whereType<String>().join('\n')
-          : notes is String
-          ? notes
-          : '';
+      final noteText =
+          notes is List
+              ? notes.whereType<String>().join('\n')
+              : notes is String
+              ? notes
+              : '';
       return InpaintResult(bytes, mimeType, noteText);
     } on FormatException {
       throw const BackendException(
@@ -171,9 +172,10 @@ class BackendClient {
     if (_closed)
       throw const BackendException('The service connection was closed.');
     final uri = _baseUri.replace(path: '${_baseUri.path}$path');
-    final request = http.Request(method, uri)
-      ..followRedirects = false
-      ..headers['Accept'] = 'application/json';
+    final request =
+        http.Request(method, uri)
+          ..followRedirects = false
+          ..headers['Accept'] = 'application/json';
     if (_token.isNotEmpty) request.headers['Authorization'] = 'Bearer $_token';
     if (body != null) {
       request.headers['Content-Type'] = 'application/json';
@@ -204,9 +206,10 @@ class BackendClient {
         }
         if (response.statusCode < 200 || response.statusCode >= 300) {
           final detail = result is Map ? result['detail'] : null;
-          final message = detail is String && detail.length <= 500
-              ? detail
-              : 'Service request failed (${response.statusCode}).';
+          final message =
+              detail is String && detail.length <= 500
+                  ? detail
+                  : 'Service request failed (${response.statusCode}).';
           throw BackendException(message, response.statusCode);
         }
         if (result is! Map<String, dynamic>) {

@@ -138,9 +138,9 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
       _transcript.text = project.pages.first.transcript;
       _preview =
           project.pages.first.editedBytes == null ||
-              project.pages.first.keepOriginal
-          ? _PreviewMode.source
-          : _PreviewMode.edited;
+                  project.pages.first.keepOriginal
+              ? _PreviewMode.source
+              : _PreviewMode.edited;
     }
   }
 
@@ -154,8 +154,9 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _friendlyError(Object error) {
@@ -184,9 +185,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
     setState(() {
       _selected = index;
       _transcript.text = _page!.transcript;
-      _preview = _page!.editedBytes == null || _page!.keepOriginal
-          ? _PreviewMode.source
-          : _PreviewMode.edited;
+      _preview =
+          _page!.editedBytes == null || _page!.keepOriginal
+              ? _PreviewMode.source
+              : _PreviewMode.edited;
       _zoom.value = Matrix4.identity();
       _mobileTab = 1;
     });
@@ -196,22 +198,23 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
     if (!_dirty) return true;
     return await showDialog<bool>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Replace this project?'),
-            content: const Text(
-              'Your latest changes have not been saved. Save a project checkpoint first if you want to return to them.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Go back'),
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Replace this project?'),
+                content: const Text(
+                  'Your latest changes have not been saved. Save a project checkpoint first if you want to return to them.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Go back'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Replace project'),
+                  ),
+                ],
               ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Replace project'),
-              ),
-            ],
-          ),
         ) ??
         false;
   }
@@ -220,9 +223,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
     if (_busy || !await _confirmReplace() || !mounted) return;
     try {
       final picked = await FilePicker.platform.pickFiles(
-        dialogTitle: checkpoint
-            ? 'Open a Manga Tools project'
-            : 'Import a manga archive',
+        dialogTitle:
+            checkpoint
+                ? 'Open a Manga Tools project'
+                : 'Import a manga archive',
         type: FileType.custom,
         allowedExtensions: checkpoint ? ['umt'] : ['cbz', 'zip'],
         withData: false,
@@ -238,15 +242,16 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
       // Yield a frame before archive validation and decoding.
       await Future<void>.delayed(Duration.zero);
       final bytes = await _readPickedFile(file, maxBytes: 256 * 1024 * 1024);
-      final project = checkpoint
-          ? _archive.openProject(bytes)
-          : _archive.importCbz(
-              bytes,
-              title: file.name.replaceFirst(
-                RegExp(r'\.(cbz|zip)$', caseSensitive: false),
-                '',
-              ),
-            );
+      final project =
+          checkpoint
+              ? _archive.openProject(bytes)
+              : _archive.importCbz(
+                bytes,
+                title: file.name.replaceFirst(
+                  RegExp(r'\.(cbz|zip)$', caseSensitive: false),
+                  '',
+                ),
+              );
       if (!mounted) return;
       setState(() {
         _project = project;
@@ -254,9 +259,9 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
         _transcript.text = project.pages.first.transcript;
         _preview =
             project.pages.first.editedBytes == null ||
-                project.pages.first.keepOriginal
-            ? _PreviewMode.source
-            : _PreviewMode.edited;
+                    project.pages.first.keepOriginal
+                ? _PreviewMode.source
+                : _PreviewMode.edited;
         _zoom.value = Matrix4.identity();
         _dirty = !checkpoint;
         _mobileTab = 1;
@@ -325,9 +330,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
   }
 
   String get _safeTitle {
-    final name = (_project?.title ?? 'Manga')
-        .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1f]'), '_')
-        .trim();
+    final name =
+        (_project?.title ?? 'Manga')
+            .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1f]'), '_')
+            .trim();
     return name.isEmpty ? 'Manga' : name;
   }
 
@@ -495,9 +501,12 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
       await _settings();
       return;
     }
-    final pending = project.pages
-        .where((page) => !page.exportReady && page.transcript.trim().isEmpty)
-        .toList();
+    final pending =
+        project.pages
+            .where(
+              (page) => !page.exportReady && page.transcript.trim().isEmpty,
+            )
+            .toList();
     if (pending.isEmpty) {
       _showMessage(
         'Every pending page already has a transcript. Review one to continue.',
@@ -517,8 +526,9 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
       for (final page in pending) {
         if (_cancelRequested || !mounted) break;
         setState(
-          () => _activity =
-              'Transcribing page ${project.pages.indexOf(page) + 1} of ${project.pages.length}…',
+          () =>
+              _activity =
+                  'Transcribing page ${project.pages.indexOf(page) + 1} of ${project.pages.length}…',
         );
         final text = await client.transcribe(page, project);
         if (_cancelRequested || !mounted) break;
@@ -561,8 +571,8 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
     if (_busy) return;
     final result = await showDialog<_ServiceSettings>(
       context: context,
-      builder: (context) =>
-          _SettingsDialog(url: _serviceUrl, token: _serviceToken),
+      builder:
+          (context) => _SettingsDialog(url: _serviceUrl, token: _serviceToken),
     );
     if (result != null && mounted) {
       setState(() {
@@ -580,63 +590,70 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
     final glossary = TextEditingController(text: project.glossary);
     final saved = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Chapter details'),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: title,
-                  decoration: const InputDecoration(labelText: 'Chapter title'),
-                ),
-                const SizedBox(height: 20),
-                const Row(
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Chapter details'),
+            content: SizedBox(
+              width: 520,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.translate_rounded, size: 19, color: _indigo),
-                    SizedBox(width: 8),
-                    Text('Japanese → English'),
+                    TextField(
+                      controller: title,
+                      decoration: const InputDecoration(
+                        labelText: 'Chapter title',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Row(
+                      children: [
+                        Icon(Icons.translate_rounded, size: 19, color: _indigo),
+                        SizedBox(width: 8),
+                        Text('Japanese → English'),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: glossary,
+                      maxLines: 8,
+                      decoration: const InputDecoration(
+                        labelText: 'Names & glossary',
+                        alignLabelWithHint: true,
+                        hintText:
+                            'One term per line, for example:\n影山 = Kageyama\nKeep honorifics such as -san and -kun.',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'The glossary accompanies new translation and inpainting requests. Existing pages are unchanged.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _muted,
+                        height: 1.5,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                TextField(
-                  controller: glossary,
-                  maxLines: 8,
-                  decoration: const InputDecoration(
-                    labelText: 'Names & glossary',
-                    alignLabelWithHint: true,
-                    hintText: 'One term per line, for example:\n影山 = Kageyama\nKeep honorifics such as -san and -kun.',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'The glossary accompanies new translation and inpainting requests. Existing pages are unchanged.',
-                  style: TextStyle(fontSize: 12, color: _muted, height: 1.5),
-                ),
-              ],
+              ),
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Save details'),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Save details'),
-          ),
-        ],
-      ),
     );
     if (saved == true && mounted) {
       setState(() {
-        project.title = title.text.trim().isEmpty
-            ? project.title
-            : title.text.trim();
+        project.title =
+            title.text.trim().isEmpty ? project.title : title.text.trim();
         project.glossary = glossary.text;
         _dirty = true;
       });
@@ -661,36 +678,38 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
               if (_error != null) _errorBanner(),
               if (_busy) _activityBar(),
               Expanded(
-                child: _project == null
-                    ? _emptyState(compact)
-                    : _workspace(wide: wide, compact: compact),
+                child:
+                    _project == null
+                        ? _emptyState(compact)
+                        : _workspace(wide: wide, compact: compact),
               ),
               if (!compact) _footer(),
             ],
           ),
-          bottomNavigationBar: compact && _project != null
-              ? NavigationBar(
-                  selectedIndex: _mobileTab,
-                  onDestinationSelected: (index) =>
-                      setState(() => _mobileTab = index),
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.view_list_outlined),
-                      selectedIcon: Icon(Icons.view_list_rounded),
-                      label: 'Pages',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.auto_stories_outlined),
-                      selectedIcon: Icon(Icons.auto_stories_rounded),
-                      label: 'Preview',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.edit_note_rounded),
-                      label: 'Translate',
-                    ),
-                  ],
-                )
-              : null,
+          bottomNavigationBar:
+              compact && _project != null
+                  ? NavigationBar(
+                    selectedIndex: _mobileTab,
+                    onDestinationSelected:
+                        (index) => setState(() => _mobileTab = index),
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.view_list_outlined),
+                        selectedIcon: Icon(Icons.view_list_rounded),
+                        label: 'Pages',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.auto_stories_outlined),
+                        selectedIcon: Icon(Icons.auto_stories_rounded),
+                        label: 'Preview',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.edit_note_rounded),
+                        label: 'Translate',
+                      ),
+                    ],
+                  )
+                  : null,
         );
       },
     );
@@ -770,9 +789,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
           const SizedBox(width: 10),
           if (_project != null)
             Tooltip(
-              message: _project!.exportReady
-                  ? 'Export all approved pages as CBZ'
-                  : 'Approve or explicitly keep each original before export',
+              message:
+                  _project!.exportReady
+                      ? 'Export all approved pages as CBZ'
+                      : 'Approve or explicitly keep each original before export',
               child: FilledButton.icon(
                 onPressed: _busy || !_project!.exportReady ? null : _export,
                 icon: const Icon(Icons.file_download_outlined, size: 18),
@@ -800,32 +820,36 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                 _settings();
             }
           },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'import',
-              child: Text('Import ZIP / CBZ'),
-            ),
-            const PopupMenuItem(
-              value: 'open',
-              child: Text('Open saved project'),
-            ),
-            if (_project != null) ...[
-              const PopupMenuItem(value: 'save', child: Text('Save project')),
-              PopupMenuItem(
-                value: 'export',
-                enabled: _project!.exportReady,
-                child: const Text('Export CBZ'),
-              ),
-              const PopupMenuItem(
-                value: 'details',
-                child: Text('Chapter details & glossary'),
-              ),
-            ],
-            const PopupMenuItem(
-              value: 'settings',
-              child: Text('Service connection'),
-            ),
-          ],
+          itemBuilder:
+              (context) => [
+                const PopupMenuItem(
+                  value: 'import',
+                  child: Text('Import ZIP / CBZ'),
+                ),
+                const PopupMenuItem(
+                  value: 'open',
+                  child: Text('Open saved project'),
+                ),
+                if (_project != null) ...[
+                  const PopupMenuItem(
+                    value: 'save',
+                    child: Text('Save project'),
+                  ),
+                  PopupMenuItem(
+                    value: 'export',
+                    enabled: _project!.exportReady,
+                    child: const Text('Export CBZ'),
+                  ),
+                  const PopupMenuItem(
+                    value: 'details',
+                    child: Text('Chapter details & glossary'),
+                  ),
+                ],
+                const PopupMenuItem(
+                  value: 'settings',
+                  child: Text('Service connection'),
+                ),
+              ],
         ),
         SizedBox(width: compact ? 6 : 14),
       ],
@@ -917,9 +941,8 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                           label: const Text('Import chapter'),
                         ),
                         OutlinedButton.icon(
-                          onPressed: _busy
-                              ? null
-                              : () => _open(checkpoint: true),
+                          onPressed:
+                              _busy ? null : () => _open(checkpoint: true),
                           icon: const Icon(Icons.folder_open_rounded, size: 19),
                           label: const Text('Open project'),
                         ),
@@ -1006,53 +1029,55 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
         SizedBox(width: wide ? 238 : 196, child: _pageRail()),
         const VerticalDivider(width: 1),
         Expanded(
-          child: wide
-              ? _previewPanel()
-              : Column(
-                  children: [
-                    Expanded(
-                      child: _mobileTab == 2 ? _editPanel() : _previewPanel(),
-                    ),
-                    Container(
-                      height: 58,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        border: Border(top: BorderSide(color: _line)),
+          child:
+              wide
+                  ? _previewPanel()
+                  : Column(
+                    children: [
+                      Expanded(
+                        child: _mobileTab == 2 ? _editPanel() : _previewPanel(),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 18),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              _page!.exportReady
-                                  ? 'Page approved'
-                                  : 'Ready to translate and review',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: _muted,
+                      Container(
+                        height: 58,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          border: Border(top: BorderSide(color: _line)),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _page!.exportReady
+                                    ? 'Page approved'
+                                    : 'Ready to translate and review',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: _muted,
+                                ),
                               ),
                             ),
-                          ),
-                          TextButton.icon(
-                            onPressed: () => setState(
-                              () => _mobileTab = _mobileTab == 2 ? 1 : 2,
+                            TextButton.icon(
+                              onPressed:
+                                  () => setState(
+                                    () => _mobileTab = _mobileTab == 2 ? 1 : 2,
+                                  ),
+                              icon: Icon(
+                                _mobileTab == 2
+                                    ? Icons.auto_stories_outlined
+                                    : Icons.edit_note_rounded,
+                              ),
+                              label: Text(
+                                _mobileTab == 2
+                                    ? 'Back to preview'
+                                    : 'Open editor',
+                              ),
                             ),
-                            icon: Icon(
-                              _mobileTab == 2
-                                  ? Icons.auto_stories_outlined
-                                  : Icons.edit_note_rounded,
-                            ),
-                            label: Text(
-                              _mobileTab == 2
-                                  ? 'Back to preview'
-                                  : 'Open editor',
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
         ),
         if (wide) ...[
           const VerticalDivider(width: 1),
@@ -1141,17 +1166,19 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
               itemBuilder: (context, index) {
                 final page = project.pages[index];
                 final selected = index == _selected;
-                final status = page.exportReady
-                    ? (page.keepOriginal ? 'Original kept' : 'Approved')
-                    : page.editedBytes != null
-                    ? 'Needs review'
-                    : page.transcript.trim().isNotEmpty
-                    ? 'Transcript ready'
-                    : 'Not started';
+                final status =
+                    page.exportReady
+                        ? (page.keepOriginal ? 'Original kept' : 'Approved')
+                        : page.editedBytes != null
+                        ? 'Needs review'
+                        : page.transcript.trim().isNotEmpty
+                        ? 'Transcript ready'
+                        : 'Not started';
                 return Material(
-                  color: selected
-                      ? _indigo.withValues(alpha: .08)
-                      : Colors.transparent,
+                  color:
+                      selected
+                          ? _indigo.withValues(alpha: .08)
+                          : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(10),
@@ -1167,9 +1194,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               border: Border.all(
-                                color: selected
-                                    ? _indigo.withValues(alpha: .35)
-                                    : _line,
+                                color:
+                                    selected
+                                        ? _indigo.withValues(alpha: .35)
+                                        : _line,
                               ),
                               borderRadius: BorderRadius.circular(4),
                             ),
@@ -1180,8 +1208,8 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                               fit: BoxFit.cover,
                               cacheWidth: 110,
                               gaplessPlayback: true,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
+                              errorBuilder:
+                                  (context, error, stackTrace) => const Icon(
                                     Icons.image_not_supported_outlined,
                                     size: 19,
                                     color: _muted,
@@ -1197,9 +1225,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                                   'Page ${(index + 1).toString().padLeft(2, '0')}',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    fontWeight: selected
-                                        ? FontWeight.w700
-                                        : FontWeight.w600,
+                                    fontWeight:
+                                        selected
+                                            ? FontWeight.w700
+                                            : FontWeight.w600,
                                     color: selected ? _indigo : _ink,
                                   ),
                                 ),
@@ -1290,9 +1319,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                   ),
                   IconButton(
                     tooltip: 'Previous page',
-                    onPressed: _busy || _selected == 0
-                        ? null
-                        : () => _selectPage(_selected - 1),
+                    onPressed:
+                        _busy || _selected == 0
+                            ? null
+                            : () => _selectPage(_selected - 1),
                     icon: const Icon(Icons.chevron_left_rounded),
                   ),
                   Text(
@@ -1301,9 +1331,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                   ),
                   IconButton(
                     tooltip: 'Next page',
-                    onPressed: _busy || _selected == _project!.pages.length - 1
-                        ? null
-                        : () => _selectPage(_selected + 1),
+                    onPressed:
+                        _busy || _selected == _project!.pages.length - 1
+                            ? null
+                            : () => _selectPage(_selected + 1),
                     icon: const Icon(Icons.chevron_right_rounded),
                   ),
                 ],
@@ -1346,10 +1377,11 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                           ),
                         ],
                         selected: {_preview},
-                        onSelectionChanged: (value) => setState(() {
-                          _preview = value.first;
-                          _zoom.value = Matrix4.identity();
-                        }),
+                        onSelectionChanged:
+                            (value) => setState(() {
+                              _preview = value.first;
+                              _zoom.value = Matrix4.identity();
+                            }),
                       ),
                     ),
                   ),
@@ -1374,25 +1406,26 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
               boundaryMargin: const EdgeInsets.all(120),
               child: Padding(
                 padding: EdgeInsets.all(compact ? 14 : 28),
-                child: _preview == _PreviewMode.compare && hasEdited
-                    ? Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: _pageImage(page.originalBytes, 'SOURCE'),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _pageImage(page.editedBytes!, 'EDITED'),
-                          ),
-                        ],
-                      )
-                    : _pageImage(
-                        _preview == _PreviewMode.source
-                            ? page.originalBytes
-                            : page.editedBytes ?? page.originalBytes,
-                        null,
-                      ),
+                child:
+                    _preview == _PreviewMode.compare && hasEdited
+                        ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: _pageImage(page.originalBytes, 'SOURCE'),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: _pageImage(page.editedBytes!, 'EDITED'),
+                            ),
+                          ],
+                        )
+                        : _pageImage(
+                          _preview == _PreviewMode.source
+                              ? page.originalBytes
+                              : page.editedBytes ?? page.originalBytes,
+                          null,
+                        ),
               ),
             ),
           ),
@@ -1445,17 +1478,22 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
               bytes,
               fit: BoxFit.contain,
               gaplessPlayback: true,
-              errorBuilder: (context, error, stackTrace) => const Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.broken_image_outlined, color: _muted, size: 32),
-                  SizedBox(height: 8),
-                  Text(
-                    'This image cannot be displayed.',
-                    style: TextStyle(color: _muted),
+              errorBuilder:
+                  (context, error, stackTrace) => const Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.broken_image_outlined,
+                        color: _muted,
+                        size: 32,
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'This image cannot be displayed.',
+                        style: TextStyle(color: _muted),
+                      ),
+                    ],
                   ),
-                ],
-              ),
             ),
           ),
         ),
@@ -1521,13 +1559,15 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
             maxLines: 16,
             style: const TextStyle(fontSize: 13, height: 1.65),
             decoration: const InputDecoration(
-              hintText: 'Translated dialogue will appear here.\n\nYou can also type your own transcript. Identify bubbles and captions in reading order.',
+              hintText:
+                  'Translated dialogue will appear here.\n\nYou can also type your own transcript. Identify bubbles and captions in reading order.',
               contentPadding: EdgeInsets.all(14),
             ),
-            onChanged: (text) => setState(() {
-              page.setTranscript(text);
-              _dirty = true;
-            }),
+            onChanged:
+                (text) => setState(() {
+                  page.setTranscript(text);
+                  _dirty = true;
+                }),
           ),
           const SizedBox(height: 9),
           const Text(
@@ -1548,9 +1588,10 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _busy || !readyForInpaint
-                  ? null
-                  : () => _runPage(inpaint: true),
+              onPressed:
+                  _busy || !readyForInpaint
+                      ? null
+                      : () => _runPage(inpaint: true),
               icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
               label: Text(
                 page.editedBytes == null
@@ -1614,14 +1655,14 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
               style: FilledButton.styleFrom(backgroundColor: _green),
               onPressed:
                   _busy ||
-                      page.editedBytes == null ||
-                      (page.reviewed && !page.keepOriginal)
-                  ? null
-                  : () => setState(() {
-                      page.useOriginal(false);
-                      page.markReviewed();
-                      _dirty = true;
-                    }),
+                          page.editedBytes == null ||
+                          (page.reviewed && !page.keepOriginal)
+                      ? null
+                      : () => setState(() {
+                        page.useOriginal(false);
+                        page.markReviewed();
+                        _dirty = true;
+                      }),
               icon: Icon(
                 page.reviewed && !page.keepOriginal
                     ? Icons.check_circle_rounded
@@ -1638,16 +1679,17 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
           const SizedBox(height: 6),
           CheckboxListTile(
             value: page.keepOriginal,
-            onChanged: _busy
-                ? null
-                : (value) => setState(() {
-                    page.useOriginal(value ?? false);
-                    if (value == true) {
-                      _preview = _PreviewMode.source;
-                      _zoom.value = Matrix4.identity();
-                    }
-                    _dirty = true;
-                  }),
+            onChanged:
+                _busy
+                    ? null
+                    : (value) => setState(() {
+                      page.useOriginal(value ?? false);
+                      if (value == true) {
+                        _preview = _PreviewMode.source;
+                        _zoom.value = Matrix4.identity();
+                      }
+                      _dirty = true;
+                    }),
             title: const Text(
               'Keep the original page',
               style: TextStyle(fontSize: 12),
@@ -1899,10 +1941,11 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                   labelText: 'Service URL',
                   hintText: 'https://your-manga-service.example',
                 ),
-                onChanged: (_) => setState(() {
-                  _healthy = false;
-                  _message = null;
-                }),
+                onChanged:
+                    (_) => setState(() {
+                      _healthy = false;
+                      _message = null;
+                    }),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -1915,10 +1958,11 @@ class _SettingsDialogState extends State<_SettingsDialog> {
                   labelText: 'Service access token',
                   prefixIcon: Icon(Icons.key_rounded, size: 19),
                 ),
-                onChanged: (_) => setState(() {
-                  _healthy = false;
-                  _message = null;
-                }),
+                onChanged:
+                    (_) => setState(() {
+                      _healthy = false;
+                      _message = null;
+                    }),
               ),
               const SizedBox(height: 10),
               const Text(
@@ -1955,23 +1999,24 @@ class _SettingsDialogState extends State<_SettingsDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _testing
-              ? null
-              : () {
-                  final validation = _validate();
-                  if (validation != null) {
-                    setState(() => _message = validation);
-                    return;
-                  }
-                  Navigator.pop(
-                    context,
-                    _ServiceSettings(
-                      _url.text.trim().replaceFirst(RegExp(r'/+$'), ''),
-                      _token.text,
-                      _healthy,
-                    ),
-                  );
-                },
+          onPressed:
+              _testing
+                  ? null
+                  : () {
+                    final validation = _validate();
+                    if (validation != null) {
+                      setState(() => _message = validation);
+                      return;
+                    }
+                    Navigator.pop(
+                      context,
+                      _ServiceSettings(
+                        _url.text.trim().replaceFirst(RegExp(r'/+$'), ''),
+                        _token.text,
+                        _healthy,
+                      ),
+                    );
+                  },
           child: const Text('Save connection'),
         ),
       ],

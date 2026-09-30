@@ -59,9 +59,8 @@ class ArchiveService {
       );
     }
     return MangaProject(
-      title: title?.trim().isNotEmpty == true
-          ? title!.trim()
-          : 'Untitled manga',
+      title:
+          title?.trim().isNotEmpty == true ? title!.trim() : 'Untitled manga',
       pages: pages,
     );
   }
@@ -84,9 +83,8 @@ class ArchiveService {
         'page': i + 1,
         'filename': filename,
         'source_name': page.sourceName,
-        'selection': page.keepOriginal
-            ? 'original_kept_explicitly'
-            : 'reviewed_edit',
+        'selection':
+            page.keepOriginal ? 'original_kept_explicitly' : 'reviewed_edit',
         'transcript': page.transcript,
         'notes': page.notes,
       });
@@ -127,9 +125,10 @@ class ArchiveService {
       final stem = 'pages/${(i + 1).toString().padLeft(4, '0')}';
       final original =
           '$stem.original.${imageExtension(page.originalMimeType)}';
-      final edited = page.editedBytes == null
-          ? null
-          : '$stem.edited.${imageExtension(page.editedMimeType!)}';
+      final edited =
+          page.editedBytes == null
+              ? null
+              : '$stem.edited.${imageExtension(page.editedMimeType!)}';
       entries[original] = page.originalBytes;
       if (edited != null) entries[edited] = page.editedBytes!;
       pages.add({
@@ -391,9 +390,10 @@ class _SafeZip {
         cursor + 46,
         cursor + 46 + nameLength,
       );
-      final name = (flags & 0x800) != 0
-          ? utf8.decode(nameBytes)
-          : latin1.decode(nameBytes);
+      final name =
+          (flags & 0x800) != 0
+              ? utf8.decode(nameBytes)
+              : latin1.decode(nameBytes);
       _validateName(name);
       if (!names.add(name.toLowerCase()))
         throw const FormatException('Duplicate archive paths are not allowed.');
@@ -547,40 +547,43 @@ Uint8List _encodeZip(Map<String, Uint8List> files) {
       );
     }
     final crc = _crc32(content), offset = output.length;
-    final local = ByteData(30)
-      ..setUint32(0, 0x04034b50, Endian.little)
-      ..setUint16(4, 20, Endian.little)
-      ..setUint16(6, 0x800, Endian.little)
-      ..setUint16(12, 33, Endian.little)
-      ..setUint32(14, crc, Endian.little)
-      ..setUint32(18, content.length, Endian.little)
-      ..setUint32(22, content.length, Endian.little)
-      ..setUint16(26, name.length, Endian.little);
+    final local =
+        ByteData(30)
+          ..setUint32(0, 0x04034b50, Endian.little)
+          ..setUint16(4, 20, Endian.little)
+          ..setUint16(6, 0x800, Endian.little)
+          ..setUint16(12, 33, Endian.little)
+          ..setUint32(14, crc, Endian.little)
+          ..setUint32(18, content.length, Endian.little)
+          ..setUint32(22, content.length, Endian.little)
+          ..setUint16(26, name.length, Endian.little);
     output.add(local.buffer.asUint8List());
     output.add(name);
     output.add(content);
-    final central = ByteData(46)
-      ..setUint32(0, 0x02014b50, Endian.little)
-      ..setUint16(4, 20, Endian.little)
-      ..setUint16(6, 20, Endian.little)
-      ..setUint16(8, 0x800, Endian.little)
-      ..setUint16(14, 33, Endian.little)
-      ..setUint32(16, crc, Endian.little)
-      ..setUint32(20, content.length, Endian.little)
-      ..setUint32(24, content.length, Endian.little)
-      ..setUint16(28, name.length, Endian.little)
-      ..setUint32(42, offset, Endian.little);
+    final central =
+        ByteData(46)
+          ..setUint32(0, 0x02014b50, Endian.little)
+          ..setUint16(4, 20, Endian.little)
+          ..setUint16(6, 20, Endian.little)
+          ..setUint16(8, 0x800, Endian.little)
+          ..setUint16(14, 33, Endian.little)
+          ..setUint32(16, crc, Endian.little)
+          ..setUint32(20, content.length, Endian.little)
+          ..setUint32(24, content.length, Endian.little)
+          ..setUint16(28, name.length, Endian.little)
+          ..setUint32(42, offset, Endian.little);
     directory.add(central.buffer.asUint8List());
     directory.add(name);
   }
   final directoryOffset = output.length, directorySize = directory.length;
   output.add(directory.takeBytes());
-  final end = ByteData(22)
-    ..setUint32(0, 0x06054b50, Endian.little)
-    ..setUint16(8, files.length, Endian.little)
-    ..setUint16(10, files.length, Endian.little)
-    ..setUint32(12, directorySize, Endian.little)
-    ..setUint32(16, directoryOffset, Endian.little);
+  final end =
+      ByteData(22)
+        ..setUint32(0, 0x06054b50, Endian.little)
+        ..setUint16(8, files.length, Endian.little)
+        ..setUint16(10, files.length, Endian.little)
+        ..setUint32(12, directorySize, Endian.little)
+        ..setUint32(16, directoryOffset, Endian.little);
   output.add(end.buffer.asUint8List());
   if (output.length > ArchiveService.maxArchiveBytes) {
     throw const FormatException('Archive exceeds the 256 MiB file limit.');
