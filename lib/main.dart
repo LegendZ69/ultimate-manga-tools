@@ -882,9 +882,9 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                 ),
               ),
               const SizedBox(height: 20),
-              const ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 580),
-                child: Text(
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 580),
+                child: const Text(
                   'Translate the dialogue. Restore the artwork. Review every page. A focused workspace for English-lettered manga archives.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 16, color: _muted, height: 1.6),
