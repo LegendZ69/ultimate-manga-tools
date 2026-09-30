@@ -1123,11 +1123,14 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
                 const SizedBox(height: 15),
                 Row(
                   children: [
-                    Text(
-                      '$_approved / ${project.pages.length} approved',
-                      style: const TextStyle(fontSize: 12, color: _muted),
+                    Expanded(
+                      child: Text(
+                        '$_approved / ${project.pages.length} approved',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12, color: _muted),
+                      ),
                     ),
-                    const Spacer(),
                     const Icon(
                       Icons.translate_rounded,
                       size: 14,
@@ -1507,6 +1510,7 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
     return ColoredBox(
       color: const Color(0xFFFBFAF7),
       child: ListView(
+        key: const ValueKey('translation-editor-scroll'),
         padding: const EdgeInsets.fromLTRB(22, 24, 22, 28),
         children: [
           Row(
@@ -1588,6 +1592,7 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
+              key: const ValueKey('inpaint-page'),
               onPressed:
                   _busy || !readyForInpaint
                       ? null
@@ -1678,6 +1683,7 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
           ),
           const SizedBox(height: 6),
           CheckboxListTile(
+            key: const ValueKey('keep-original-page'),
             value: page.keepOriginal,
             onChanged:
                 _busy

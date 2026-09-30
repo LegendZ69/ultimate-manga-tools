@@ -29,6 +29,14 @@ void setViewport(WidgetTester tester, Size size) {
   addTearDown(tester.view.resetDevicePixelRatio);
 }
 
+Finder editorScrollable() =>
+    find
+        .descendant(
+          of: find.byKey(const ValueKey('translation-editor-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+
 void main() {
   for (final size in [const Size(390, 844), const Size(1440, 900)]) {
     testWidgets('Import workspace fits ${size.width.toInt()}px viewport', (
@@ -60,6 +68,12 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(find.text('Translate the page'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('inpaint-page')),
+        250,
+        scrollable: editorScrollable(),
+      );
+      await tester.pumpAndSettle();
       expect(find.text('Inpaint this page'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
@@ -75,8 +89,13 @@ void main() {
 
     final export = find.widgetWithText(FilledButton, 'Export CBZ');
     expect(tester.widget<FilledButton>(export).onPressed, isNull);
-    final keepOriginal = find.byType(CheckboxListTile);
-    await tester.ensureVisible(keepOriginal);
+    final keepOriginal = find.byKey(const ValueKey('keep-original-page'));
+    await tester.scrollUntilVisible(
+      keepOriginal,
+      250,
+      scrollable: editorScrollable(),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(keepOriginal);
     await tester.pumpAndSettle();
 
