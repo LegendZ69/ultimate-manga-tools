@@ -1,0 +1,180 @@
+name: Build and publish preview
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.47.5'
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Read and validate release version
+        id: version
+        shell: bash
+        run: |
+          version="$(sed -n 's/^version: *\([^+ ]*\).*/\1/p' pubspec.yaml)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo 'The Git tag must match the version in pubspec.yaml.' >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+      - run: flutter pub get
+      - name: Archive resolved dependency lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-lockfile
+          path: pubspec.lock
+          if-no-files-found: error
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test AI bridge without live API calls
+        run: |
+          python -m pip install -e './server[test]'
+          python -m pytest server/tests -q
+
+  android:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: dependency-lockfile
+          path: .
+      - run: flutter pub get --enforce-lockfile
+      - name: Build preview APK (release mode, debug signing key)
+        run: flutter build apk --release
+      - name: Collect APK
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/Ultimate-Manga-Tools-${{ needs.verify.outputs.version }}-android-preview-debug-signed.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-preview
+          path: dist/*.apk
+          if-no-files-found: error
+
+  apple:
+    needs: verify
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter config --no-enable-swift-package-manager
+      - uses: actions/download-artifact@v4
+        with:
+          name: dependency-lockfile
+          path: .
+      - run: flutter pub get --enforce-lockfile
+      - name: Build macOS preview (ad-hoc signed)
+        run: flutter build macos --release
+      - name: Package and verify macOS DMG
+        run: scripts/package_macos.sh '${{ needs.verify.outputs.version }}'
+      - name: Build unsigned iOS application
+        run: flutter build ios --release --no-codesign
+      - name: Package unsigned IPA for re-signing
+        run: scripts/package_unsigned_ipa.sh '${{ needs.verify.outputs.version }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apple-preview
+          path: |
+            dist/*.dmg
+            dist/*.ipa
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name != 'pull_request'
+    needs: [verify, android, apple]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create checksums and notes
+        env:
+          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          (cd dist && sha256sum *.apk *.dmg *.ipa pubspec.lock > SHA256SUMS.txt)
+          cat > release-notes.md <<'EOF'
+          Preview of the manga archive workflow: import ZIP/CBZ pages, review and edit translated text, use a separately configured AI bridge, review English lettering, and export CBZ.
+
+          **Artifact status**
+          - Android APK: release-mode preview, signed with an ephemeral Android debug key. Suitable for sideload testing; not a production/Play Store build. Future previews may require uninstalling this version because CI does not retain the key.
+          - macOS DMG: ad-hoc signed, **not Apple notarized**. Gatekeeper may require a manual Open Anyway approval. This is not a Developer ID distribution.
+          - iOS IPA: **unsigned**. It cannot be installed directly and must be re-signed with your own Apple signing certificate and provisioning profile, or rebuilt in Xcode. This is not an App Store or TestFlight release.
+
+          AI functions need the self-hosted bridge and your own API credentials. The original ChatGPT-only tools are not bundled. See README for setup and limitations.
+
+          SHA256 checksums and the resolved Flutter dependency lockfile are included. No Apple credentials or production Android signing key were used.
+
+          Automated checks cover static analysis and unit/widget tests. Live AI calls and physical device runtime behavior have not been tested. All artifacts are built from the same source commit.
+          EOF
+          printf '\nBuilt from commit `%s`.\n' "$GITHUB_SHA" >> release-notes.md
+      - name: Publish prerelease only after every build passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            tagged_sha="$(git rev-list -n 1 "$RELEASE_TAG")"
+            if [[ "$tagged_sha" != "$GITHUB_SHA" ]]; then
+              echo "Refusing to replace $RELEASE_TAG from another commit. Bump the app version first." >&2
+              exit 1
+            fi
+          fi
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/* --clobber
+          else
+            gh release create "$RELEASE_TAG" dist/* --target "$GITHUB_SHA" --title "Ultimate Manga Tools $RELEASE_TAG preview" --notes-file release-notes.md --prerelease
+          fi
