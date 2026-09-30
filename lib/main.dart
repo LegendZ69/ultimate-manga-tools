@@ -1507,7 +1507,7 @@ class _MangaWorkspaceState extends State<MangaWorkspace> {
   Widget _editPanel() {
     final page = _page!;
     final readyForInpaint = page.transcript.trim().isNotEmpty;
-    return ColoredBox(
+    return Material(
       color: const Color(0xFFFBFAF7),
       child: ListView(
         key: const ValueKey('translation-editor-scroll'),
